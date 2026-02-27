@@ -1,0 +1,51 @@
+# Python
+__pycache__/
+*.py[cod]
+*.pyo
+.venv/
+venv/
+env/
+*.egg-info/
+dist/
+build/
+
+# Media / video (archivos grandes — no versionar)
+*.mp4
+*.mov
+*.avi
+*.mkv
+*.wmv
+*.flv
+*.webm
+*.prproj
+*.aep
+*.drp
+
+# Imágenes grandes
+*.psd
+*.ai
+*.indd
+*.xcf
+
+# Audio
+*.wav
+*.aiff
+*.flac
+
+# Archivos temporales y del sistema
+*.tmp
+*.log
+Thumbs.db
+.DS_Store
+desktop.ini
+
+# Entornos y secretos
+.env
+.env.*
+secrets.*
+*.key
+*.pem
+
+# IDEs
+.vscode/
+.idea/
