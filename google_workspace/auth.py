@@ -12,7 +12,6 @@ SCOPES = [
     "https://www.googleapis.com/auth/spreadsheets",
     "https://www.googleapis.com/auth/calendar",
     "https://www.googleapis.com/auth/calendar.events",
-    "https://www.googleapis.com/auth/gmail.modify",
 ]
 
 CREDENTIALS_FILE = os.path.join(os.path.dirname(__file__), "..", "credentials.json")
