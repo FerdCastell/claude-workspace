@@ -46,6 +46,10 @@ secrets.*
 *.key
 *.pem
 
+# Google credentials (nunca versionar)
+credentials.json
+token.json
+
 # IDEs
 .vscode/
 .idea/
