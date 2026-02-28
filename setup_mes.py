@@ -58,6 +58,7 @@ ESTADO_COLORS = {
 }
 
 PLATAFORMA_OPTS = ["Instagram", "TikTok", "LinkedIn", "YouTube Shorts", "Multi-plataforma"]
+FORMATO_OPTS    = ["Reel", "Carousel", "Post Estático", "Stories", "YouTube Shorts", "Video Largo", "Live"]
 
 # ─── COLUMNAS CALENDARIO ─────────────────────────────────────────────────────
 #  A   B    C               D     E           F        G               H
@@ -82,7 +83,7 @@ HEADERS = [
     "RESPONSABLE",              # L  11
     "% COMPLETADO",             # M  12
     "📁 CARPETA DRIVE",         # N  13
-    "🖼 ASSETS",                # O  14
+    "🔗 LINK / ARCHIVO",        # O  14
     "👁 BORRADOR / PREVIEW",    # P  15
     "🔗 POST PUBLICADO",        # Q  16
     "FECHA REAL PUBLICACIÓN",   # R  17
@@ -92,9 +93,10 @@ HEADERS = [
 ]
 
 N_COLS     = len(HEADERS)   # 21
-COL_TIPO   = 3
-COL_PLAT   = 4
-COL_ESTADO = 10
+COL_TIPO    = 3
+COL_PLAT    = 4
+COL_FORMATO = 5
+COL_ESTADO  = 10
 COL_PCT    = 12
 COL_DRIVE  = 13
 COL_ASSETS = 14
@@ -175,7 +177,7 @@ def _col(n):
     return result
 
 
-def _build_calendar_rows(posts, semana_labels, post_folders, assets_link):
+def _build_calendar_rows(posts, semana_labels, post_folders):
     rows = []
     for i, post in enumerate(posts):
         r = i + 2  # 1-indexed, row 1 is header
@@ -186,8 +188,7 @@ def _build_calendar_rows(posts, semana_labels, post_folders, assets_link):
             f'+IF({_col(8)}{r}<>"",1,0)'
             f'+IF({_col(9)}{r}<>"",1,0))/3'
         )
-        drive_formula  = f'=HYPERLINK("{folder_url}","📁 Abrir")' if folder_url else ""
-        assets_formula = f'=HYPERLINK("{assets_link}","🖼 Assets")'
+        drive_formula = f'=HYPERLINK("{folder_url}","📁 Abrir")' if folder_url else ""
         rows.append([
             post["fecha"],
             post["dia"],
@@ -203,7 +204,7 @@ def _build_calendar_rows(posts, semana_labels, post_folders, assets_link):
             "",             # RESPONSABLE
             pct_formula,    # % COMPLETADO
             drive_formula,  # CARPETA DRIVE
-            assets_formula, # ASSETS
+            "",             # LINK / ARCHIVO (pega Canva / WeTransfer / Drive)
             "",             # BORRADOR
             "",             # POST PUBLICADO
             "",             # FECHA REAL
@@ -279,12 +280,12 @@ def _format_requests(tab_cal, tab_met, tab_hooks, n_rows, posts):
         "fields": "userEnteredFormat(backgroundColor,textFormat,horizontalAlignment,verticalAlignment,wrapStrategy)",
     }})
 
-    # Data rows: bone bg, black text
+    # Data rows: white bg, black text
     reqs.append({"repeatCell": {
         "range": {"sheetId": tab_cal, "startRowIndex": 1, "endRowIndex": 1 + n_rows,
                   "startColumnIndex": 0, "endColumnIndex": N_COLS},
         "cell": {"userEnteredFormat": {
-            "backgroundColor": BONE,
+            "backgroundColor": WHITE,
             "textFormat": {"foregroundColor": BLACK, "fontSize": 10, "fontFamily": "Arial"},
             "verticalAlignment": "TOP",
             "wrapStrategy": "WRAP",
@@ -340,6 +341,20 @@ def _format_requests(tab_cal, tab_met, tab_hooks, n_rows, posts):
             "condition": {
                 "type": "ONE_OF_LIST",
                 "values": [{"userEnteredValue": p} for p in PLATAFORMA_OPTS],
+            },
+            "showCustomUi": True,
+            "strict": False,
+        },
+    }})
+
+    # FORMATO dropdown
+    reqs.append({"setDataValidation": {
+        "range": {"sheetId": tab_cal, "startRowIndex": 1, "endRowIndex": 1 + n_rows,
+                  "startColumnIndex": COL_FORMATO, "endColumnIndex": COL_FORMATO + 1},
+        "rule": {
+            "condition": {
+                "type": "ONE_OF_LIST",
+                "values": [{"userEnteredValue": f} for f in FORMATO_OPTS],
             },
             "showCustomUi": True,
             "strict": False,
@@ -415,7 +430,7 @@ def _format_requests(tab_cal, tab_met, tab_hooks, n_rows, posts):
         120,  # RESPONSABLE
         95,   # % COMPLETADO
         90,   # CARPETA DRIVE
-        80,   # ASSETS
+        140,  # LINK / ARCHIVO
         90,   # BORRADOR
         90,   # POST PUBLICADO
         130,  # FECHA REAL
@@ -434,20 +449,38 @@ def _format_requests(tab_cal, tab_met, tab_hooks, n_rows, posts):
     reqs.append({"updateDimensionProperties": {
         "range": {"sheetId": tab_cal, "dimension": "ROWS",
                   "startIndex": 1, "endIndex": 1 + n_rows},
-        "properties": {"pixelSize": 80},
+        "properties": {"pixelSize": 68},
         "fields": "pixelSize",
     }})
 
-    # Borders
+    # Borders: Apple-like — outer medium gray, inner very light
+    BORDER_OUTER = {"red": 0.72, "green": 0.72, "blue": 0.72}
+    BORDER_H     = {"red": 0.88, "green": 0.88, "blue": 0.88}
+    BORDER_V     = {"red": 0.94, "green": 0.94, "blue": 0.94}
     reqs.append({"updateBorders": {
         "range": {"sheetId": tab_cal, "startRowIndex": 0, "endRowIndex": 1 + n_rows,
                   "startColumnIndex": 0, "endColumnIndex": N_COLS},
-        "top":             {"style": "SOLID_THICK", "color": BLACK},
-        "bottom":          {"style": "SOLID_THICK", "color": BLACK},
-        "left":            {"style": "SOLID_THICK", "color": BLACK},
-        "right":           {"style": "SOLID_THICK", "color": BLACK},
-        "innerHorizontal": {"style": "SOLID",       "color": MGRAY},
-        "innerVertical":   {"style": "SOLID",       "color": MGRAY},
+        "top":             {"style": "SOLID",  "color": BORDER_OUTER},
+        "bottom":          {"style": "SOLID",  "color": BORDER_OUTER},
+        "left":            {"style": "SOLID",  "color": BORDER_OUTER},
+        "right":           {"style": "SOLID",  "color": BORDER_OUTER},
+        "innerHorizontal": {"style": "SOLID",  "color": BORDER_H},
+        "innerVertical":   {"style": "SOLID",  "color": BORDER_V},
+    }})
+
+    # Link columns (DRIVE, LINK/ARCHIVO, BORRADOR, POST PUBLICADO): Apple blue-tint "button" look
+    LINK_BG   = {"red": 0.93, "green": 0.95, "blue": 1.0}
+    LINK_TEXT = {"red": 0.04, "green": 0.36, "blue": 0.78}
+    reqs.append({"repeatCell": {
+        "range": {"sheetId": tab_cal, "startRowIndex": 1, "endRowIndex": 1 + n_rows,
+                  "startColumnIndex": COL_DRIVE, "endColumnIndex": COL_DRIVE + 4},
+        "cell": {"userEnteredFormat": {
+            "backgroundColor": LINK_BG,
+            "horizontalAlignment": "CENTER",
+            "verticalAlignment": "MIDDLE",
+            "textFormat": {"foregroundColor": LINK_TEXT, "bold": True, "fontSize": 10},
+        }},
+        "fields": "userEnteredFormat(backgroundColor,horizontalAlignment,verticalAlignment,textFormat)",
     }})
 
     # ── MÉTRICAS ──────────────────────────────────────────────────────────────
@@ -537,20 +570,15 @@ def main():
     mes_name = cfg.MES
     semanas  = cfg.SEMANAS
     posts    = cfg.POSTS
-    clientes = getattr(cfg, "CLIENTES", [])
-
     print(f"\n=== EVRYWR.MEDIA — Setup {mes_name} ===\n")
 
     # ── Drive: estructura raíz ────────────────────────────────────────────────
     print("Drive — carpetas raíz:")
     evrywr_id,   evrywr_link  = get_or_create_folder("EVRYWR")
     archivo_id,  _            = get_or_create_folder("ARCHIVO",   evrywr_id)
-    assets_id,   assets_link  = get_or_create_folder("ASSETS",    evrywr_id)
+    assets_id,   _            = get_or_create_folder("ASSETS",    evrywr_id)
     for sub in ["B-Roll", "Templates Graficos", "Brand Guidelines", "Musica y Audio", "Fotos Equipo"]:
         get_or_create_folder(sub, assets_id)
-    clientes_id, _ = get_or_create_folder("CLIENTES",   evrywr_id)
-    for c in clientes:
-        get_or_create_folder(c, clientes_id)
     refs_id,     _ = get_or_create_folder("REFERENCIAS", evrywr_id)
     for sub in ["Inspiracion Visual", "Competencia", "Benchmarks y Data", "Guiones de Referencia"]:
         get_or_create_folder(sub, refs_id)
@@ -591,7 +619,7 @@ def main():
     tab_hooks = sp["sheets"][2]["properties"]["sheetId"]
 
     # Write CALENDARIO
-    cal_rows = _build_calendar_rows(posts, semana_labels, post_folders, assets_link)
+    cal_rows = _build_calendar_rows(posts, semana_labels, post_folders)
     sheets_svc.spreadsheets().values().update(
         spreadsheetId=sheet_id,
         range="CALENDARIO!A1",
